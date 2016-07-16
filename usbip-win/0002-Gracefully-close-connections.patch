@@ -1,0 +1,32 @@
+From 6d255b1690ffd04f03cf1a75e2ccd6d2b62e3013 Mon Sep 17 00:00:00 2001
+From: Max Lapan <max.lapan@gmail.com>
+Date: Wed, 13 Jul 2016 20:34:45 +0200
+Subject: [PATCH 2/2] Gracefully close connections
+
+---
+ trunk/userspace/src/usbip_windows.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/trunk/userspace/src/usbip_windows.c b/trunk/userspace/src/usbip_windows.c
+index 3e2dbfa..ee86a0f 100644
+--- a/trunk/userspace/src/usbip_windows.c
++++ b/trunk/userspace/src/usbip_windows.c
+@@ -897,6 +897,7 @@ int attach_device(char * host, char * busid)
+ 	}
+ 	if(query_interface0(sockfd, busid, &uinf)){
+ 		err("cannot find device");
++		closesocket(sockfd);
+ 		return 0;
+ 	}
+ 	closesocket(sockfd);
+@@ -908,6 +909,7 @@ int attach_device(char * host, char * busid)
+ 	rhport = query_import_device(sockfd, busid, &uinf, &devfd);
+ 	if (rhport < 0) {
+ 		err("query");
++		closesocket(sockfd);
+ 		return 0;
+ 	}
+ 	info("new usb device attached to usbvbus port %d\n", rhport);
+-- 
+2.1.4
+

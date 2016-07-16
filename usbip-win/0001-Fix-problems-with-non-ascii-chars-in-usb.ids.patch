@@ -1,0 +1,235 @@
+From 40a4bd7e79a6b681fd968c16c4095c94b47bef12 Mon Sep 17 00:00:00 2001
+From: Max Lapan <max.lapan@gmail.com>
+Date: Tue, 12 Jul 2016 22:30:43 +0200
+Subject: [PATCH 1/2] Fix problems with non-ascii chars in usb.ids
+
+---
+ trunk/userspace/libsrc/names.c | 57 ++++++++++++++++++++++++------------------
+ 1 file changed, 32 insertions(+), 25 deletions(-)
+
+diff --git a/trunk/userspace/libsrc/names.c b/trunk/userspace/libsrc/names.c
+index 5e0aa6c..ab113a3 100644
+--- a/trunk/userspace/libsrc/names.c
++++ b/trunk/userspace/libsrc/names.c
+@@ -454,6 +454,13 @@ static int new_countrycode(const char *name, unsigned int countrycode)
+ 	return new_genericstrtable(countrycodes, name, countrycode);
+ }
+ 
++static int ascii_isspace(char c)
++{
++	if (!isascii(c))
++		return 1;
++	return isspace(c);
++}
++
+ /* ---------------------------------------------------------------------- */
+ 
+ #define DBG(x)
+@@ -478,14 +485,14 @@ static void parse(FILE *f)
+                 if (buf[0] == 'P' && buf[1] == 'H' && buf[2] == 'Y' && buf[3] == 'S' && buf[4] == 'D' &&
+                     buf[5] == 'E' && buf[6] == 'S' && /*isspace(buf[7])*/ buf[7] == ' ') {
+                         cp = buf + 8;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid Physdes type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid Physdes type at line %u\n", linectr);
+@@ -499,14 +506,14 @@ static void parse(FILE *f)
+                 }
+                 if (buf[0] == 'P' && buf[1] == 'H' && buf[2] == 'Y' && /*isspace(buf[3])*/ buf[3] == ' ') {
+                         cp = buf + 4;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid PHY type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid PHY type at line %u\n", linectr);
+@@ -520,14 +527,14 @@ static void parse(FILE *f)
+                 }
+                 if (buf[0] == 'B' && buf[1] == 'I' && buf[2] == 'A' && buf[3] == 'S' && /*isspace(buf[4])*/ buf[4] == ' ') {
+                         cp = buf + 5;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid BIAS type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid BIAS type at line %u\n", linectr);
+@@ -541,14 +548,14 @@ static void parse(FILE *f)
+                 }
+                 if (buf[0] == 'L' && /*isspace(buf[1])*/ buf[1] == ' ') {
+                         cp =  buf+2;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid LANGID spec at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid LANGID spec at line %u\n", linectr);
+@@ -564,14 +571,14 @@ static void parse(FILE *f)
+ 		if (buf[0] == 'C' && /*isspace(buf[1])*/ buf[1] == ' ') {
+ 			/* class spec */
+ 			cp = buf+2;
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!isxdigit(*cp)) {
+ 				fprintf(stderr, "Invalid class spec at line %u\n", linectr);
+ 				continue;
+ 			}
+ 			u = strtoul(cp, &cp, 16);
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!*cp) {
+ 				fprintf(stderr, "Invalid class spec at line %u\n", linectr);
+@@ -584,17 +591,17 @@ static void parse(FILE *f)
+ 			lastclass = u;
+ 			continue;
+ 		}
+-		if (buf[0] == 'A' && buf[1] == 'T' && isspace(buf[2])) {
++		if (buf[0] == 'A' && buf[1] == 'T' && ascii_isspace(buf[2])) {
+ 			/* audio terminal type spec */
+ 			cp = buf+3;
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!isxdigit(*cp)) {
+ 				fprintf(stderr, "Invalid audio terminal type at line %u\n", linectr);
+ 				continue;
+ 			}
+ 			u = strtoul(cp, &cp, 16);
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!*cp) {
+ 				fprintf(stderr, "Invalid audio terminal type at line %u\n", linectr);
+@@ -605,17 +612,17 @@ static void parse(FILE *f)
+ 			DBG(printf("line %5u audio terminal type %02x %s\n", linectr, u, cp));
+ 			continue;
+ 		}
+-		if (buf[0] == 'H' && buf[1] == 'C' && buf[2] == 'C' && isspace(buf[3])) {
++		if (buf[0] == 'H' && buf[1] == 'C' && buf[2] == 'C' && ascii_isspace(buf[3])) {
+ 			/* HID Descriptor bCountryCode */
+                         cp =  buf+3;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid HID country code at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 10);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid HID country code at line %u\n", linectr);
+@@ -629,7 +636,7 @@ static void parse(FILE *f)
+ 		if (isxdigit(*cp)) {
+ 			/* vendor */
+ 			u = strtoul(cp, &cp, 16);
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!*cp) {
+ 				fprintf(stderr, "Invalid vendor spec at line %u\n", linectr);
+@@ -645,7 +652,7 @@ static void parse(FILE *f)
+ 		if (buf[0] == '\t' && isxdigit(buf[1])) {
+ 			/* product or subclass spec */
+ 			u = strtoul(buf+1, &cp, 16);
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!*cp) {
+ 				fprintf(stderr, "Invalid product/subclass spec at line %u\n", linectr);
+@@ -680,7 +687,7 @@ static void parse(FILE *f)
+ 		if (buf[0] == '\t' && buf[1] == '\t' && isxdigit(buf[2])) {
+ 			/* protocol spec */
+ 			u = strtoul(buf+2, &cp, 16);
+-			while (isspace(*cp))
++			while (ascii_isspace(*cp))
+ 				cp++;
+ 			if (!*cp) {
+ 				fprintf(stderr, "Invalid protocol spec at line %u\n", linectr);
+@@ -697,14 +704,14 @@ static void parse(FILE *f)
+ 		}
+ 		if (buf[0] == 'H' && buf[1] == 'I' && buf[2] == 'D' && /*isspace(buf[3])*/ buf[3] == ' ') {
+ 			cp = buf + 4;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid HID type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid HID type at line %u\n", linectr);
+@@ -718,14 +725,14 @@ static void parse(FILE *f)
+ 		}
+                 if (buf[0] == 'H' && buf[1] == 'U' && buf[2] == 'T' && /*isspace(buf[3])*/ buf[3] == ' ') {
+                         cp = buf + 4;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid HUT type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid HUT type at line %u\n", linectr);
+@@ -741,14 +748,14 @@ static void parse(FILE *f)
+                 }
+                 if (buf[0] == 'R' && buf[1] == ' ') {
+                         cp = buf + 2;
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!isxdigit(*cp)) {
+                                 fprintf(stderr, "Invalid Report type at line %u\n", linectr);
+                                 continue;
+                         }
+                         u = strtoul(cp, &cp, 16);
+-                        while (isspace(*cp))
++                        while (ascii_isspace(*cp))
+                                 cp++;
+                         if (!*cp) {
+                                 fprintf(stderr, "Invalid Report type at line %u\n", linectr);
+-- 
+2.1.4
+
