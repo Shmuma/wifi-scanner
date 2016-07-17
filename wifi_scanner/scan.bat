@@ -1,1 +1,1 @@
-c:/Anaconda2/python.exe c:/wifi_scanner/test_scan.py
+c:/Anaconda2/python.exe c:/wifi_scanner/scan.py
