@@ -1,0 +1,28 @@
+#!/bin/sh
+
+SCANNER_USB_ID="03f0:1c05"
+
+############### You should'n modify script below this line ##############
+# Insert modules
+modprobe vhci_hcd
+modprobe usbip-core
+modprobe usbip-host
+
+# Start usbipd, it's logs will be written into /var/log/syslog
+usbipd -D
+
+# Find busid of our scanner
+busid=`usbip list -l | grep $SCANNER_USB_ID | grep busid | cut -d ' ' -f 4`
+
+if test "a$busid" = a; then
+  echo "Error! Scanner with USBID $SCANNER_USB_ID not found"
+  exit 1
+fi
+
+# bind usbip device
+usbip bind -b $busid
+
+# attach it
+usbip attach -r 127.0.0.1 -b $busid
+sleep 1
+usbip detach -p 0
