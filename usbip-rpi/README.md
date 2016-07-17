@@ -1,8 +1,8 @@
-To setup RPi's side of things, you need to put script S99-export-usbip-scanner into
-/etc/rc5.d.
+To setup RPi's side of things, you need to put script export-usbip-scanner into
+/etc/init.d and run this command as root 'update-rc.d export-usbip-scanner defaults'.
 
 If you're using different scanner than HP ScanJet 200, you may need to put it's
-USB id in the begginning of the script.
+USB id in variable SCANNER\_USB\_IP in the script.
 
 This script does the following:
 1. Inserts required kernel modules

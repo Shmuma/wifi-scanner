@@ -1,5 +1,14 @@
 #!/bin/sh
 
+### BEGIN INIT INFO
+# Provides:             export-usbip-scanner
+# Required-Start:       $remote_fs $syslog
+# Required-Stop:        $remote_fs $syslog
+# Default-Start:        2 3 4 5
+# Default-Stop:         
+# Short-Description:    Exports USBIP scanner
+### END INIT INFO
+
 SCANNER_USB_ID="03f0:1c05"
 
 ############### You should'n modify script below this line ##############
