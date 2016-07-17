@@ -16,5 +16,5 @@ Last two steps are required as ScanJet 200 has problems with USB interface
 enumeration, and without attach/detach, windows won't be able to find it.
 
 Reboot RPi and if everything goes well, you will be able to list your scanner
-from windows machine using command "usbip.exe -l <rpi-ip-address>"
+from windows machine using command "usbip.exe -l \<rpi-ip-address\>"
 
