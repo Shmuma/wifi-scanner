@@ -5,12 +5,12 @@ void send_color(int value) {
     while (mask > 0) {
         if (value & mask) {
             digitalWrite(0, 1);
-            digitalWrite(0, 1);
+            //            digitalWrite(0, 1);
             digitalWrite(0, 0);
         }
         else {
             digitalWrite(0, 1);
-            digitalWrite(0, 0);
+            //            digitalWrite(0, 0);
             digitalWrite(0, 0);            
         }
         mask >>= 1;
