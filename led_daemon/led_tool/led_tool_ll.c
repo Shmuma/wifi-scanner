@@ -141,10 +141,35 @@ void calibrate(int count) {
 }
 
 
-int main(int argc, char **argv)
-{
+void send_rgb(int r, int g, int b) {
     int i, k;
 
+    for (k = 0; k < 8; k++) {
+        for (i = 0; i < (g == 0 ? send_zero_1_loop : send_one_1_loop); i++)
+            GPIO_SET = 1<<4;
+        for (i = 0; i < (g == 0 ? send_zero_0_loop : send_one_0_loop); i++)
+            GPIO_CLR = 1<<4;
+    }
+    for (k = 0; k < 8; k++) {
+        for (i = 0; i < (r == 0 ? send_zero_1_loop : send_one_1_loop); i++)
+            GPIO_SET = 1<<4;
+        for (i = 0; i < (r == 0 ? send_zero_0_loop : send_one_0_loop); i++)
+            GPIO_CLR = 1<<4;
+    }
+    for (k = 0; k < 8; k++) {
+        for (i = 0; i < (b == 0 ? send_zero_1_loop : send_one_1_loop); i++)
+            GPIO_SET = 1<<4;
+        for (i = 0; i < (b == 0 ? send_zero_0_loop : send_one_0_loop); i++)
+            GPIO_CLR = 1<<4;
+    }
+
+    for (i = 0; i < gap_loop; i++)
+        GPIO_CLR = 1<<4;
+}
+
+
+int main(int argc, char **argv)
+{
     // Set up gpi pointer for direct register access
     setup_io();
     
@@ -155,28 +180,23 @@ int main(int argc, char **argv)
     OUT_GPIO(4);
 
     while (1) {
-        // send red
-        for (k = 0; k < 8; k++) {
-            for (i = 0; i < send_zero_1_loop; i++)
-                GPIO_SET = 1<<4;
-            for (i = 0; i < send_zero_0_loop; i++)
-                GPIO_CLR = 1<<4;
-        }
-        for (k = 0; k < 8; k++) {
-            for (i = 0; i < send_zero_1_loop; i++)
-                GPIO_SET = 1<<4;
-            for (i = 0; i < send_zero_0_loop; i++)
-                GPIO_CLR = 1<<4;
-        }
-        for (k = 0; k < 8; k++) {
-            for (i = 0; i < send_one_1_loop; i++)
-                GPIO_SET = 1<<4;
-            for (i = 0; i < send_one_0_loop; i++)
-                GPIO_CLR = 1<<4;
-        }
-        for (i = 0; i < gap_loop; i++)
-            GPIO_CLR = 1<<4;
-  }
+        send_rgb(1, 0, 0);
+        sleep(2);
+        send_rgb(0, 1, 0);
+        sleep(2);
+        send_rgb(0, 0, 1);
+        sleep(2);
+        /*
+        send_rgb(1, 0, 1);
+        sleep(1);
+        send_rgb(0, 1, 1);
+        sleep(1);
+        send_rgb(1, 1, 0);
+        sleep(1);
+        send_rgb(1, 1, 1);
+        sleep(1);
+        */
+    }
   
   /*
   while (1) {
