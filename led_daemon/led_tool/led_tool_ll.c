@@ -23,6 +23,9 @@
 #define BLOCK_SIZE (4*1024)
 
 int  mem_fd;
+#include <time.h>
+#include <wiringPi.h>
+
 void *gpio_map;
 
 // I/O access
@@ -39,24 +42,174 @@ volatile unsigned *gpio;
 
 #define GET_GPIO(g) (*(gpio+13)&(1<<g)) // 0 if LOW, (1<<g) if HIGH
 
+#define D1_ZERO 200L
+#define D0_ZERO 450L
+#define D1_ONE 400L
+#define D0_ONE 200L
+#define GAP_DELAY 30000L
+
 
 void setup_io();
 
+struct timespec time_1;
+struct timespec time_2;
+
+void send_zero() {
+    clock_gettime(CLOCK_REALTIME, &time_1);
+    GPIO_SET = 1<<4;
+    while (1) {
+        clock_gettime(CLOCK_REALTIME, &time_2);
+        if (time_2.tv_nsec - time_1.tv_nsec >= D1_ZERO)
+            break;
+    }
+    
+    GPIO_CLR = 1<<4;
+
+    while (1) {
+        clock_gettime(CLOCK_REALTIME, &time_1);
+        if (time_1.tv_nsec - time_2.tv_nsec >= D0_ZERO)
+            break;
+    }
+}
+
+
+void send_one() {
+    clock_gettime(CLOCK_REALTIME, &time_1);
+    GPIO_SET = 1<<4;
+    while (1) {
+        clock_gettime(CLOCK_REALTIME, &time_2);
+        if (time_2.tv_nsec - time_1.tv_nsec >= D1_ONE)
+            break;
+    }
+    
+    GPIO_CLR = 1<<4;
+
+    while (1) {
+        clock_gettime(CLOCK_REALTIME, &time_1);
+        if (time_1.tv_nsec - time_2.tv_nsec >= D0_ONE)
+            break;
+    }
+}
+
+
+void send_gap() {
+    clock_gettime(CLOCK_REALTIME, &time_1);
+    GPIO_CLR = 1<<4;
+    while (1) {
+        clock_gettime(CLOCK_REALTIME, &time_2);
+        if (time_2.tv_nsec - time_1.tv_nsec >= GAP_DELAY)
+            break;
+    }
+}
+
+void inline do_wait() {
+    time_1.tv_sec = 0;
+    time_1.tv_nsec = 150000L;
+    if (nanosleep(&time_1, &time_2) != 0)
+        nanosleep(&time_2, NULL);
+}
+
+volatile int global = 0;
+int send_zero_1_loop;
+int send_zero_0_loop;
+int send_one_1_loop;
+int send_one_0_loop;
+int gap_loop;
+
+void calibrate(int count) {
+    int i;
+    double single_ns;
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &time_1);
+    for (i = 0; i < count; i++) {
+        GPIO_CLR = 1<<4;
+    }
+    clock_gettime(CLOCK_MONOTONIC_RAW, &time_2);
+
+    single_ns = (double)(time_2.tv_nsec - time_1.tv_nsec) / count;
+    printf("calibrate %d: delta = %ld, single=%.4f\n", count, time_2.tv_nsec - time_1.tv_nsec, single_ns);
+
+    send_zero_1_loop = (int)(400 / single_ns);
+    send_zero_0_loop = (int)(850 / single_ns);
+    send_one_1_loop = (int)(800 / single_ns);
+    send_one_0_loop = (int)(450 / single_ns);
+    gap_loop = (int)(50000 / single_ns);
+
+    printf("zero_1: %d, zero_0: %d\n", send_zero_1_loop, send_zero_0_loop);
+    printf("one_1:  %d, one_0:  %d\n", send_one_1_loop, send_one_0_loop);
+    printf("gap: %d\n", gap_loop);
+}
+
+
 int main(int argc, char **argv)
 {
-  int g,rep;
+    int i, k;
 
-  // Set up gpi pointer for direct register access
-  setup_io();
+    // Set up gpi pointer for direct register access
+    setup_io();
+    
+    calibrate(1000000);
 
-  // Set GPIO pin 4 to output
-  INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
-  OUT_GPIO(4);
-  
-  while(1) {
-    GPIO_SET = 1<<4;
-    GPIO_CLR = 1<<4;
+    // Set GPIO pin 4 to output
+    INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
+    OUT_GPIO(4);
+
+    while (1) {
+        // send red
+        for (k = 0; k < 8; k++) {
+            for (i = 0; i < send_zero_1_loop; i++)
+                GPIO_SET = 1<<4;
+            for (i = 0; i < send_zero_0_loop; i++)
+                GPIO_CLR = 1<<4;
+        }
+        for (k = 0; k < 8; k++) {
+            for (i = 0; i < send_zero_1_loop; i++)
+                GPIO_SET = 1<<4;
+            for (i = 0; i < send_zero_0_loop; i++)
+                GPIO_CLR = 1<<4;
+        }
+        for (k = 0; k < 8; k++) {
+            for (i = 0; i < send_one_1_loop; i++)
+                GPIO_SET = 1<<4;
+            for (i = 0; i < send_one_0_loop; i++)
+                GPIO_CLR = 1<<4;
+        }
+        for (i = 0; i < gap_loop; i++)
+            GPIO_CLR = 1<<4;
   }
+  
+  /*
+  while (1) {
+      send_one();
+      send_one();
+      send_one();
+      send_one();
+      send_one();
+      send_one();
+      send_one();
+      send_one();
+
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+      send_zero();
+
+      send_gap();
+  }
+  */
 
   return 0;
 
