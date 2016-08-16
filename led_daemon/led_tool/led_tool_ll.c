@@ -170,6 +170,7 @@ void send_rgb(int r, int g, int b) {
 
 int main(int argc, char **argv)
 {
+    int i;
     // Set up gpi pointer for direct register access
     setup_io();
     
@@ -180,12 +181,19 @@ int main(int argc, char **argv)
     OUT_GPIO(4);
 
     while (1) {
-        send_rgb(1, 0, 0);
+        for (i = 0; i < 10; i++)
+            send_rgb(1, 0, 0);
         sleep(2);
-        send_rgb(0, 1, 0);
+        for (i = 0; i < 10; i++)
+            send_rgb(0, 1, 0);
         sleep(2);
-        send_rgb(0, 0, 1);
+        for (i = 0; i < 10; i++)
+            send_rgb(0, 0, 1);
         sleep(2);
+        //        send_rgb(0, 1, 0);
+        //        sleep(2);
+        //        send_rgb(0, 0, 1);
+        //        sleep(2);
         /*
         send_rgb(1, 0, 1);
         sleep(1);
