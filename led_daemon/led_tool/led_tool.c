@@ -70,40 +70,65 @@ void calibrate(int);
 void send_rgb(int, int, int);
 void decode_sequence(int, int, int);
 void send_sequence();
+int parse_arguments(int, char**, int*, int*, int*);
+
 
 int main(int argc, char **argv)
 {
-    int i;
-    int bright = 255;
-    int delta = -20;
+    int r, g, b;
+
+    // parse arguments
+    if (!parse_arguments(argc, argv, &r, &g, &b))
+        return -1;
+
     // Set up gpi pointer for direct register access
     setup_io();
     
+    // calibrate our timers
     calibrate(1000000);
 
     // Set GPIO pin 4 to output
     INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
     OUT_GPIO(4);
 
-    while (1) {
-        decode_sequence(bright, 0, 0);
-        send_sequence();
-        sleep(1);
-        decode_sequence(0, bright, 0);
-        send_sequence();
-        sleep(1);
-        decode_sequence(0, 0, bright);
-        send_sequence();
-        sleep(1);
-
-        if (bright+delta <= 0 || bright+delta >= 255)
-            delta = -delta;
-
-        bright += delta;
-    }
-  
+    decode_sequence(r, g, b);
+    send_sequence();
     return 0;
 } // main
+
+
+void show_help(char* msg)
+{
+    printf("Arguments error: %s\n", msg);
+    printf("Usage:\n");
+    printf("led_tool red_val green_val blue_val\n\n");
+    printf("Where red_val, green_val and blue_val are [0..255] brightness level\n\n");
+}
+
+int parse_arguments(int argc, char** argv, int* r, int* g, int* b)
+{
+    if (argc != 4) {
+        show_help("wrong number of arguments");
+        return 0;
+    }
+
+    if (sscanf(argv[1], "%d", r) != 1) {
+        show_help("red brightness error");
+        return 0;
+    }
+
+    if (sscanf(argv[2], "%d", g) != 1) {
+        show_help("green brightness error");
+        return 0;
+    }
+
+    if (sscanf(argv[3], "%d", b) != 1) {
+        show_help("blue brightness error");
+        return 0;
+    }
+
+    return 1;
+}
 
 
 //
