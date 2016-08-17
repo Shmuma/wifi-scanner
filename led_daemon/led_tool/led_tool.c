@@ -49,21 +49,33 @@ volatile unsigned *gpio;
 #define GAP_DELAY 30000L
 
 // Calibrated timings
-int send_zero_1_loop;
-int send_zero_0_loop;
-int send_one_1_loop;
-int send_one_0_loop;
-int gap_loop;
+unsigned send_zero_1_loop;
+unsigned send_zero_0_loop;
+unsigned send_one_1_loop;
+unsigned send_one_0_loop;
+unsigned gap_loop;
+
+// decoded sequence to set led color. Every entry is count of iterations we need to wait at output level.
+// https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf
+// Structure: 
+//   2 -- we have two levels for every bit to send
+//   8 -- we have eight bits for every color channel
+//   3 -- we have three color channels
+// This sequence values is based on calibration timings and filled by decode_sequence function
+unsigned sequence[2*8*3];
 
 
 void setup_io();
 void calibrate(int);
 void send_rgb(int, int, int);
-
+void decode_sequence(int, int, int);
+void send_sequence();
 
 int main(int argc, char **argv)
 {
     int i;
+    int bright = 255;
+    int delta = -20;
     // Set up gpi pointer for direct register access
     setup_io();
     
@@ -74,15 +86,20 @@ int main(int argc, char **argv)
     OUT_GPIO(4);
 
     while (1) {
-        for (i = 0; i < 10; i++)
-            send_rgb(1, 0, 0);
-        sleep(2);
-        for (i = 0; i < 10; i++)
-            send_rgb(0, 1, 0);
-        sleep(2);
-        for (i = 0; i < 10; i++)
-            send_rgb(0, 0, 1);
-        sleep(2);
+        decode_sequence(bright, 0, 0);
+        send_sequence();
+        sleep(1);
+        decode_sequence(0, bright, 0);
+        send_sequence();
+        sleep(1);
+        decode_sequence(0, 0, bright);
+        send_sequence();
+        sleep(1);
+
+        if (bright+delta <= 0 || bright+delta >= 255)
+            delta = -delta;
+
+        bright += delta;
     }
   
     return 0;
@@ -139,10 +156,10 @@ void calibrate(int count) {
     single_ns = (double)(time_2.tv_nsec - time_1.tv_nsec) / count;
     printf("calibrate %d: delta = %ld, single=%.4f\n", count, time_2.tv_nsec - time_1.tv_nsec, single_ns);
 
-    send_zero_1_loop = (int)(400 / single_ns);
-    send_zero_0_loop = (int)(850 / single_ns);
-    send_one_1_loop = (int)(800 / single_ns);
-    send_one_0_loop = (int)(450 / single_ns);
+    send_zero_1_loop = (unsigned)(400 / single_ns);
+    send_zero_0_loop = (unsigned)(850 / single_ns);
+    send_one_1_loop = (unsigned)(800 / single_ns);
+    send_one_0_loop = (unsigned)(450 / single_ns);
     gap_loop = (int)(50000 / single_ns);
 
     printf("zero_1: %d, zero_0: %d\n", send_zero_1_loop, send_zero_0_loop);
@@ -176,4 +193,55 @@ void send_rgb(int r, int g, int b) {
     for (i = 0; i < gap_loop; i++)
         GPIO_CLR = 1<<4;
 }
+
+
+void send_sequence() {
+    int i, k;
+    unsigned t;
+
+    for (k = 0; k < 10; k++) {
+        for (i = 0; i < sizeof(sequence) / sizeof(sequence[0]); i += 2) {
+            t = sequence[i];
+            while (t > 0) {
+                GPIO_SET = 1<<4;
+                t--;
+            }
+            t = sequence[i+1];
+            while (t > 0) {
+                GPIO_CLR = 1<<4;
+                t--;
+            }
+        }
+
+        for (i = 0; i < gap_loop; i++)
+            GPIO_CLR = 1<<4;        
+    }
+}
+
+
+void decode_color(unsigned* buf, int val) {
+    int bit;
+    int bit_val;
+
+    for (bit = 7; bit >= 0; bit--) {
+        bit_val = val % 2;
+        if (bit_val) {
+            buf[bit*2] = send_one_1_loop;
+            buf[bit*2+1] = send_one_0_loop;
+        }
+        else {
+            buf[bit*2] = send_zero_1_loop;
+            buf[bit*2+1] = send_zero_0_loop;
+        }
+        val >>= 1;
+    }
+}
+
+
+void decode_sequence(int r, int g, int b) {
+    decode_color(sequence, g);
+    decode_color(&sequence[2*8], r);
+    decode_color(&sequence[2*8*2], b);
+}
+
 
