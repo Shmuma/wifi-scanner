@@ -48,77 +48,87 @@ volatile unsigned *gpio;
 #define D0_ONE 200L
 #define GAP_DELAY 30000L
 
-
-void setup_io();
-
-struct timespec time_1;
-struct timespec time_2;
-
-void send_zero() {
-    clock_gettime(CLOCK_REALTIME, &time_1);
-    GPIO_SET = 1<<4;
-    while (1) {
-        clock_gettime(CLOCK_REALTIME, &time_2);
-        if (time_2.tv_nsec - time_1.tv_nsec >= D1_ZERO)
-            break;
-    }
-    
-    GPIO_CLR = 1<<4;
-
-    while (1) {
-        clock_gettime(CLOCK_REALTIME, &time_1);
-        if (time_1.tv_nsec - time_2.tv_nsec >= D0_ZERO)
-            break;
-    }
-}
-
-
-void send_one() {
-    clock_gettime(CLOCK_REALTIME, &time_1);
-    GPIO_SET = 1<<4;
-    while (1) {
-        clock_gettime(CLOCK_REALTIME, &time_2);
-        if (time_2.tv_nsec - time_1.tv_nsec >= D1_ONE)
-            break;
-    }
-    
-    GPIO_CLR = 1<<4;
-
-    while (1) {
-        clock_gettime(CLOCK_REALTIME, &time_1);
-        if (time_1.tv_nsec - time_2.tv_nsec >= D0_ONE)
-            break;
-    }
-}
-
-
-void send_gap() {
-    clock_gettime(CLOCK_REALTIME, &time_1);
-    GPIO_CLR = 1<<4;
-    while (1) {
-        clock_gettime(CLOCK_REALTIME, &time_2);
-        if (time_2.tv_nsec - time_1.tv_nsec >= GAP_DELAY)
-            break;
-    }
-}
-
-void inline do_wait() {
-    time_1.tv_sec = 0;
-    time_1.tv_nsec = 150000L;
-    if (nanosleep(&time_1, &time_2) != 0)
-        nanosleep(&time_2, NULL);
-}
-
-volatile int global = 0;
+// Calibrated timings
 int send_zero_1_loop;
 int send_zero_0_loop;
 int send_one_1_loop;
 int send_one_0_loop;
 int gap_loop;
 
+
+void setup_io();
+void calibrate(int);
+void send_rgb(int, int, int);
+
+
+int main(int argc, char **argv)
+{
+    int i;
+    // Set up gpi pointer for direct register access
+    setup_io();
+    
+    calibrate(1000000);
+
+    // Set GPIO pin 4 to output
+    INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
+    OUT_GPIO(4);
+
+    while (1) {
+        for (i = 0; i < 10; i++)
+            send_rgb(1, 0, 0);
+        sleep(2);
+        for (i = 0; i < 10; i++)
+            send_rgb(0, 1, 0);
+        sleep(2);
+        for (i = 0; i < 10; i++)
+            send_rgb(0, 0, 1);
+        sleep(2);
+    }
+  
+    return 0;
+} // main
+
+
+//
+// Set up a memory regions to access GPIO
+//
+void setup_io()
+{
+   /* open /dev/mem */
+   if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
+      printf("can't open /dev/mem \n");
+      exit(-1);
+   }
+
+   /* mmap GPIO */
+   gpio_map = mmap(
+      NULL,             //Any adddress in our space will do
+      BLOCK_SIZE,       //Map length
+      PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
+      MAP_SHARED,       //Shared with other processes
+      mem_fd,           //File to map
+      GPIO_BASE         //Offset to GPIO peripheral
+   );
+
+   close(mem_fd); //No need to keep mem_fd open after mmap
+
+   if (gpio_map == MAP_FAILED) {
+      printf("mmap error %d\n", (int)gpio_map);//errno also set!
+      exit(-1);
+   }
+
+   // Always use volatile pointer!
+   gpio = (volatile unsigned *)gpio_map;
+
+
+} // setup_io
+
+
 void calibrate(int count) {
     int i;
     double single_ns;
+    struct timespec time_1;
+    struct timespec time_2;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &time_1);
     for (i = 0; i < count; i++) {
@@ -167,113 +177,3 @@ void send_rgb(int r, int g, int b) {
         GPIO_CLR = 1<<4;
 }
 
-
-int main(int argc, char **argv)
-{
-    int i;
-    // Set up gpi pointer for direct register access
-    setup_io();
-    
-    calibrate(1000000);
-
-    // Set GPIO pin 4 to output
-    INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
-    OUT_GPIO(4);
-
-    while (1) {
-        for (i = 0; i < 10; i++)
-            send_rgb(1, 0, 0);
-        sleep(2);
-        for (i = 0; i < 10; i++)
-            send_rgb(0, 1, 0);
-        sleep(2);
-        for (i = 0; i < 10; i++)
-            send_rgb(0, 0, 1);
-        sleep(2);
-        //        send_rgb(0, 1, 0);
-        //        sleep(2);
-        //        send_rgb(0, 0, 1);
-        //        sleep(2);
-        /*
-        send_rgb(1, 0, 1);
-        sleep(1);
-        send_rgb(0, 1, 1);
-        sleep(1);
-        send_rgb(1, 1, 0);
-        sleep(1);
-        send_rgb(1, 1, 1);
-        sleep(1);
-        */
-    }
-  
-  /*
-  while (1) {
-      send_one();
-      send_one();
-      send_one();
-      send_one();
-      send_one();
-      send_one();
-      send_one();
-      send_one();
-
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-      send_zero();
-
-      send_gap();
-  }
-  */
-
-  return 0;
-
-} // main
-
-
-//
-// Set up a memory regions to access GPIO
-//
-void setup_io()
-{
-   /* open /dev/mem */
-   if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
-      printf("can't open /dev/mem \n");
-      exit(-1);
-   }
-
-   /* mmap GPIO */
-   gpio_map = mmap(
-      NULL,             //Any adddress in our space will do
-      BLOCK_SIZE,       //Map length
-      PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
-      MAP_SHARED,       //Shared with other processes
-      mem_fd,           //File to map
-      GPIO_BASE         //Offset to GPIO peripheral
-   );
-
-   close(mem_fd); //No need to keep mem_fd open after mmap
-
-   if (gpio_map == MAP_FAILED) {
-      printf("mmap error %d\n", (int)gpio_map);//errno also set!
-      exit(-1);
-   }
-
-   // Always use volatile pointer!
-   gpio = (volatile unsigned *)gpio_map;
-
-
-} // setup_io
