@@ -42,11 +42,11 @@ volatile unsigned *gpio;
 
 #define GET_GPIO(g) (*(gpio+13)&(1<<g)) // 0 if LOW, (1<<g) if HIGH
 
-#define D1_ZERO 200L
-#define D0_ZERO 450L
-#define D1_ONE 400L
-#define D0_ONE 200L
-#define GAP_DELAY 30000L
+#define D1_ZERO 400L
+#define D0_ZERO 850L
+#define D1_ONE 800L
+#define D0_ONE 400L
+#define GAP_DELAY 50000L
 
 // Calibrated timings
 unsigned send_zero_1_loop;
@@ -178,13 +178,13 @@ void calibrate(int count) {
     }
     clock_gettime(CLOCK_MONOTONIC_RAW, &time_2);
 
-    single_ns = (double)(time_2.tv_nsec - time_1.tv_nsec) / count;
+    single_ns = (double)((time_2.tv_sec - time_1.tv_sec) * 1000000000L + (time_2.tv_nsec - time_1.tv_nsec)) / count;
     printf("calibrate %d: delta = %ld, single=%.4f\n", count, time_2.tv_nsec - time_1.tv_nsec, single_ns);
 
-    send_zero_1_loop = (unsigned)(400 / single_ns);
-    send_zero_0_loop = (unsigned)(850 / single_ns);
-    send_one_1_loop = (unsigned)(800 / single_ns);
-    send_one_0_loop = (unsigned)(450 / single_ns);
+    send_zero_1_loop = (unsigned)(D1_ZERO / single_ns);
+    send_zero_0_loop = (unsigned)(D0_ZERO / single_ns);
+    send_one_1_loop = (unsigned)(D1_ONE / single_ns);
+    send_one_0_loop = (unsigned)(D0_ONE / single_ns);
     gap_loop = (int)(50000 / single_ns);
 
     printf("zero_1: %d, zero_0: %d\n", send_zero_1_loop, send_zero_0_loop);
