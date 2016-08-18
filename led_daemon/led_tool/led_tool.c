@@ -14,6 +14,7 @@
 
 
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -24,7 +25,6 @@
 
 int  mem_fd;
 #include <time.h>
-#include <wiringPi.h>
 
 void *gpio_map;
 
@@ -155,7 +155,7 @@ void setup_io()
    close(mem_fd); //No need to keep mem_fd open after mmap
 
    if (gpio_map == MAP_FAILED) {
-      printf("mmap error %d\n", (int)gpio_map);//errno also set!
+      printf("mmap error %d\n", errno);//errno also set!
       exit(-1);
    }
 
