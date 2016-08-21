@@ -130,13 +130,14 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(sys.argv[0])
     with lockfile.LockFile(os.path.join(base_dir, "lock")):
         # check directory
-        if not os.path.exists(FOLDER_TO_SAVE):
-            os.makedirs(FOLDER_TO_SAVE)
+        dest_dir = os.path.join(DRIVE_TO_ATTACH + "\\", FOLDER_TO_SAVE)
+        if not os.path.exists(dest_dir):
+            os.makedirs(dest_dir)
 
-        last_datetime, last_dir = find_last_file_datetime_and_dir(FOLDER_TO_SAVE)
+        last_datetime, last_dir = find_last_file_datetime_and_dir(dest_dir)
         max_delta = datetime.timedelta(minutes=NEW_FOLDER_MINUTES)
         if last_datetime is None or datetime.datetime.now() - last_datetime > max_delta:
-            last_dir = make_new_dir(FOLDER_TO_SAVE)
+            last_dir = make_new_dir(dest_dir)
 
         set_led_color(255, 0, 0)
         sm = twain.SourceManager(0)
