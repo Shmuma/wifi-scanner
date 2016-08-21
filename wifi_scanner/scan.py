@@ -3,17 +3,24 @@ import sys
 import twain
 import datetime
 import lockfile
+import urllib
 from PIL import ImageFile
 
 # ================== Options to tweak
 # this string will be looked in list of twain sources
 SCANNER_NAME = "scanjet"
-# where images will be saved
-FOLDER_TO_SAVE = "//192.168.2.10/shared/scans"
+# network share to attach (need to have backslashes!)
+NETWORK_SHARE = r"\\192.168.2.10\shared"
+# folder on network share to save image
+FOLDER_TO_SAVE = "scans"
+# drive letter to use for network share
+DRIVE_TO_ATTACH = "x:"
 # resolution to scan
 SCAN_RESOLUTION_DPI = 200
 # interval between scans when new folder will be created
 NEW_FOLDER_MINUTES = 2*60
+# scanner machine dns name or address
+SCANNER_ADDRESS = "pi-scanner"
 # ================== No user-configurable options below
 
 
@@ -105,6 +112,20 @@ def make_new_dir(base_path):
     os.makedirs(path)
     return path
 
+
+def set_led_color(red, green, blue):
+    """
+    Change led color
+    :param red: 0..255
+    :param green: 0..255
+    :param blue: 0..255
+    """
+    url = "http://{host}:8000/set_led?r={red}&g={green}&b={blue}".\
+                format(host=SCANNER_ADDRESS, red=red, green=green, blue=blue)
+    url_obj = urllib.urlopen(url)
+    print(url_obj.read())
+
+
 if __name__ == "__main__":
     base_dir = os.path.dirname(sys.argv[0])
     with lockfile.LockFile(os.path.join(base_dir, "lock")):
@@ -117,6 +138,7 @@ if __name__ == "__main__":
         if last_datetime is None or datetime.datetime.now() - last_datetime > max_delta:
             last_dir = make_new_dir(FOLDER_TO_SAVE)
 
+        set_led_color(255, 0, 0)
         sm = twain.SourceManager(0)
         src = detect_best_source(sm.GetSourceList())
         ss = sm.OpenSource(src)
@@ -128,3 +150,6 @@ if __name__ == "__main__":
             (handle, count) = rv
             bmp_data = twain.DIBToBMFile(handle)
             save_image(bmp_data, last_dir)
+            set_led_color(0, 255, 0)
+        else:
+            set_led_color(0, 0, 255)
