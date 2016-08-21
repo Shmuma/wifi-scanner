@@ -151,6 +151,6 @@ if __name__ == "__main__":
             (handle, count) = rv
             bmp_data = twain.DIBToBMFile(handle)
             save_image(bmp_data, last_dir)
-            set_led_color(0, 255, 0)
+            set_led_color(0, 0, 0)
         else:
             set_led_color(0, 0, 255)
